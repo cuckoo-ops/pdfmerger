@@ -1,2 +1,2 @@
-# pdf-merger
-merge multiple pdf files to one pdf
+# PDF-Merger
+Merge multiple pdf files to one pdf
