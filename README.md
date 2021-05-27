@@ -26,7 +26,7 @@ pip install -r requirements-dev.txt
 1. Example:
     ```
     $ pdfmerger list  /xx/xx/*.pdf
-    >> 2021-05-27 20:29:07,397:INFO   : PDF list in the C:\xx\xx:
+    >> 2021-05-27 20:29:07,397:INFO   : PDF list in the /xx/xx/:
     >> [1] /xx/xx/2.0 others.pdf
     >> [2] /xx/xx/2.others .pdf
     >> [3] /xx/xx/test+3.1.pdf
