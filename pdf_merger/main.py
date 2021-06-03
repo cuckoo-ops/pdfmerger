@@ -2,6 +2,7 @@ import glob
 import os
 import logging
 import PyPDF2
+from PyPDF2.utils import PdfReadError
 import click
 from pdf_merger import __app_name__, __version__
 
@@ -31,7 +32,7 @@ def list_pdf(directory):
     logging.info(f'PDF list in the {os.path.dirname(directory)}:')
     try:
         for index, f in enumerate(list_pdf_directory(directory), start=1):
-            click.echo(f'[{index}] {f}')
+            click.echo(f'[{index:<3}] {f}')
     except NotADirectoryError as  e:
         logging.warning(e)
 
@@ -75,11 +76,17 @@ def merge(files, directory, output, ):
             logging.error('{} \'{}\''.format(one_pdf, e))
             return False
     with open(output_path, 'wb') as f:
-        merge_file.write(f)
+        try:
+            merge_file.write(f)
+        except PdfReadError as e:
+            logging.error(e)
+            return False
         logging.info(f'merged pdf:\'{output_path}\'')
 
     return True
 
+def command():
+    cli(prog_name=__app_name__)
 
 if __name__ == '__main__':
-    cli(prog_name=__app_name__)
+    command()

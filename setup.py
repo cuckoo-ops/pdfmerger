@@ -43,6 +43,6 @@ setup(
         "Programming Language :: Python :: 3.6",
     ],
     include_package_data=True,
-    entry_points={'console_scripts': ['pdfmerger=pdf_merger.main:main']
-    }
+    entry_points={'console_scripts': ['pdfmerger=pdf_merger.main:command']
+                  }
 )
