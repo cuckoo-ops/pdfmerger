@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 .idea/
 release/
+test_data/
+*.txt
