@@ -46,6 +46,8 @@ class Pages():
 
 
 class Pdf(object):
+    index_in_line = -1
+
     def __init__(self, pdf_path):
         self.pdf_path = pdf_path
 
@@ -56,7 +58,7 @@ class Pdf(object):
                 for page in pdf.pages:
                     # index = page.extract_words()[-1]['text']
                     text = page.extract_text()
-                    index = text.splitlines()[-1].strip()
+                    index = text.splitlines()[self.index_in_line].strip()
                     page_indexes.append(Page(self.pdf_path, int(index)))
             except Exception as e:
                 raise ExtractPageIndexError(f'{index} on \'{self.pdf_path}\'', )

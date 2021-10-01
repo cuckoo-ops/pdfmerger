@@ -13,7 +13,7 @@ class TestPdf(unittest.TestCase):
         pdf.extract_pages_index()
 
     def test_pages_sort(self):
-        pdf = Pdf(os.path.join(test_data_dir, '2.pdf'))
+        pdf = Pdf(os.path.join(test_data_dir, '7.pdf'))
         pages = pdf.extract_pages_index()
         pages.sort()
         print(pages.get_path_indexes())

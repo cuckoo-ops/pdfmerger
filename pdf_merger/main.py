@@ -33,7 +33,7 @@ def merge_pdf(input_files: list, output_path: str, direct_merge: bool):
         merge_file = PyPDF2.PdfFileMerger(strict=False)
         for one_pdf in input_files:
             file_path = one_pdf
-            if isinstance(one_pdf,tuple):
+            if isinstance(one_pdf, tuple):
                 file_path = one_pdf[0]
             try:
                 # pdf_obj = PyPDF2.PdfFileReader(one_pdf, strict=False)
@@ -117,8 +117,11 @@ def list_pdf(directory):
 @click.option('-o', '--output', default=os.getcwd(), type=click.Path(writable=True), help='output path')
 @click.option('-s', '--sort', is_flag=True, default=True, help='Specify whether to sort files, default is true')
 @click.option('--headers', multiple=True, type=click.Path(exists=True), help='Specify file path to insert header')
-def merge(files, directory, output, sort, headers):
-    logging.basicConfig(format='%(asctime)s:%(levelname)-7s %(filename)s [line:%(lineno)d]: %(message)s', level=logging.WARNING)
+@click.option('-l', '--line', default=-1, type=click.INT, help='Specify the page index is which line')
+def merge(files, directory, output, sort, headers, line):
+    logging.basicConfig(format='%(asctime)s:%(levelname)-7s %(filename)s [line:%(lineno)d]: %(message)s',
+                        level=logging.WARNING)
+    Pdf.index_in_line = line
     input_files = []
     if os.path.isdir(output):
         logging.error('output is invalid path')
