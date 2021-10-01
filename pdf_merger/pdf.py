@@ -1,82 +1,63 @@
-import PyPDF2
-from PyPDF2.utils import PdfReadError
-from pdfminer.pdfparser import PDFParser, PDFDocument
-from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter, PDFTextExtractionNotAllowed
-from pdfminer.converter import PDFPageAggregator
-from pdfminer.layout import LTTextBoxHorizontal,LAParams
+import pdfplumber
 
-from pdfminer.pdfinterp import PDFResourceManager, process_pdf
-from pdfminer.pdfdevice import TagExtractor
-from pdfminer.converter import XMLConverter, HTMLConverter, TextConverter
+from pdf_merger import ExtractPageIndexError
 
-# from pdfminer.pdfinterp import PDFTextExtractionNotAllowed
+
+class Page():
+    def __init__(self, path, index):
+        self.path = path
+        self.index = index
+
+    def __hash__(self):
+        return hash(self.index)
+
+    def __eq__(self, other):
+        return self.index == other.index
+
+
+class Pages():
+    def __init__(self):
+        self.pages = []
+        self.unique_pages = []
+
+    def sort(self):
+        self.unique_pages = list(dict.fromkeys(self.pages))
+        self.unique_pages.sort(key=lambda x: x.index)
+
+    def has_duplicate(self):
+        return len(self.unique_pages) < len(self.pages)
+
+    def append(self, page: Page):
+        self.pages.append(page)
+
+    def extend(self, pages):
+        self.pages.extend(pages.pages)
+
+    def get_path_indexes(self):
+        if len(self.unique_pages) == 0: return
+        before_page = self.unique_pages[0]
+        path_index = [(before_page.path, [before_page.index])]
+        for page in self.unique_pages[1:]:
+            if page.path != before_page.path:
+                path_index.append((page.path, []))
+            path_index[-1][1].append(page.index)
+            before_page = page
+        return path_index
 
 
 class Pdf(object):
     def __init__(self, pdf_path):
         self.pdf_path = pdf_path
 
-    def get_page_indexes(self):
-        page_indexes = []
-        with open(self.pdf_path, 'rb') as f:
-            pdf_obj = PyPDF2.PdfFileReader(f, strict=False)
-            pages_count = pdf_obj.getNumPages()
-            is_encrypted = pdf_obj.getIsEncrypted()
-            print(f'isEncrypted:{is_encrypted}')
-            print(pages_count)
-
-            for page_index in range(pages_count):
-                page = pdf_obj.getPage(page_index)
-                page_contents = page.extractText()
-                print(page_contents.decode())
-                break
-    def to_text(self):
-        with open(self.pdf_path, 'rb') as fp:
-            rsrcmgr = PDFResourceManager(caching=False)
-            laparams = LAParams()
-            with open('test.txt', 'w') as outfp:
-                device = TextConverter(rsrcmgr, outfp, laparams=laparams)
-                process_pdf(rsrcmgr, device, fp, [0,1], maxpages=100, password=None,
-                            caching=False, check_extractable=True)
-    def get_text(self):
-        with open(self.pdf_path, 'rb') as fp:
-            # 用文件对象来创建一个pdf文档分析器
-            parser = PDFParser(fp)
-            # 创建一个PDF文档PDFDocument
-            doc = PDFDocument()
-            # 连接分析器 与文档对象
-            parser.set_document(doc)
-            doc.set_parser(parser)
-
-            # 提供初始化密码,如果没有密码 就创建一个空的字符串
-            doc.initialize()
-
-            # 检测文档是否提供txt转换，不提供就忽略
-            if not doc.is_extractable:
-                raise PDFTextExtractionNotAllowed
-            else:
-                # 创建PDf 资源管理器 来管理共享资源PDFResourceManager
-                rsrcmgr = PDFResourceManager()
-                # 创建一个PDF设备对象LAParams
-                laparams = LAParams()
-                # 创建聚合器,用于读取文档的对象PDFPageAggregator
-                device = PDFPageAggregator(rsrcmgr, laparams=laparams)
-                # 创建一个PDF解释器对象,对文档编码，解释成Python能够识别的格式：PDFPageInterpreter
-                interpreter = PDFPageInterpreter(rsrcmgr, device)
-
-                # 循环遍历列表，每次处理一个page的内容
-                for page in doc.get_pages():  # doc.get_pages() 获取page列表
-                    # 利用解释器的process_page()方法解析读取单独页数
-                    interpreter.process_page(page)
-                    # 这里layout是一个LTPage对象,里面存放着这个page解析出的各种对象,一般包括LTTextBox, LTFigure, LTImage, LTTextBoxHorizontal等等,想要获取文本就获得对象的text属性，
-                    # 使用聚合器get_result()方法获取页面内容
-                    layout = device.get_result()
-                    for x in layout:
-                        # if (isinstance(x, LTTextBoxHorizontal)):
-                        try:
-                            results = x.get_text()
-                            print(results)
-
-                        except AttributeError as  e:
-                            pass
-                    # break
+    def extract_pages_index(self) -> Pages:
+        page_indexes = Pages()
+        with pdfplumber.open(self.pdf_path) as pdf:
+            try:
+                for page in pdf.pages:
+                    # index = page.extract_words()[-1]['text']
+                    text = page.extract_text()
+                    index = text.splitlines()[-1].strip()
+                    page_indexes.append(Page(self.pdf_path, int(index)))
+            except Exception as e:
+                raise ExtractPageIndexError(f'{index} on \'{self.pdf_path}\'', )
+        return page_indexes

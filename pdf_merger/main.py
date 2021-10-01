@@ -4,7 +4,8 @@ import logging
 import PyPDF2
 from PyPDF2.utils import PdfReadError
 import click
-from pdf_merger import __app_name__, __version__
+from pdf_merger import __app_name__, __version__, ExtractPageIndexError
+from pdf_merger.pdf import Pdf, Pages
 
 logging.basicConfig(format='%(asctime)s:%(levelname)-7s: %(message)s', level=logging.INFO)
 
@@ -27,13 +28,16 @@ def merge_pdf(input_files: list, output_path: str, direct_merge: bool):
     :return:
     '''
     merged_ok = True
-    open_files = []
+    open_files = {}
     if direct_merge:
-        merge_file = PyPDF2.PdfFileMerger()
+        merge_file = PyPDF2.PdfFileMerger(strict=False)
         for one_pdf in input_files:
+            file_path = one_pdf
+            if isinstance(one_pdf,tuple):
+                file_path = one_pdf[0]
             try:
                 # pdf_obj = PyPDF2.PdfFileReader(one_pdf, strict=False)
-                merge_file.append(one_pdf)
+                merge_file.append(file_path)
             except Exception as e:
                 logging.error('{} \'{}\''.format(one_pdf, e))
                 merged_ok = False
@@ -41,11 +45,14 @@ def merge_pdf(input_files: list, output_path: str, direct_merge: bool):
 
     else:
         merge_file = PyPDF2.PdfFileWriter()
-
         for one_file in input_files:
             file_path = one_file[0]
             extracted_page_index = one_file[1]
-            one_pdf = open(one_file[0], 'rb')
+            if file_path in open_files.keys():
+                one_pdf = open_files.get(file_path)
+            else:
+                one_pdf = open(file_path, 'rb')
+
             try:
                 pdf_obj = PyPDF2.PdfFileReader(file_path, strict=False)
                 page_number = pdf_obj.getNumPages()
@@ -58,7 +65,7 @@ def merge_pdf(input_files: list, output_path: str, direct_merge: bool):
                 for i in extracted_page_index:
                     p = pdf_obj.getPage(i)
                     merge_file.addPage(p)
-                open_files.append(one_pdf)
+                open_files[file_path] = one_pdf
             except Exception as e:
                 logging.error(f' merge failed {e}')
                 one_pdf.close()
@@ -71,30 +78,17 @@ def merge_pdf(input_files: list, output_path: str, direct_merge: bool):
             except PdfReadError as e:
                 logging.error(e)
                 merged_ok = False
-    for f in open_files:
+    for f in open_files.values():
         f.close()
     return merged_ok
 
 
-def extract_page_index(input_files: list):
+def sort_pdf_files(input_files: list):
+    pages_index = Pages()
     for input_f in input_files:
-        with open(input_f, 'rb') as f:
-            pdf_obj = PyPDF2.PdfFileReader(f, strict=False)
-            pages_count = pdf_obj.getNumPages()
-            for page_index in range(pages_count):
-                page = pdf_obj.getPage(page_index)
-                page_contents = page.getContents()
-                print(page_contents)
-
-
-def sort_pdf_files(input_files):
-    sorted_files = input_files
-    return sorted_files
-
-
-# def merge(input_files: list, output_path: str, header: list):
-#
-#    pass
+        pages_index.extend(Pdf(input_f).extract_pages_index())
+    pages_index.sort()
+    return pages_index.get_path_indexes(), pages_index.has_duplicate()
 
 
 @click.version_option(version=__version__, prog_name=__app_name__)
@@ -124,6 +118,7 @@ def list_pdf(directory):
 @click.option('-s', '--sort', is_flag=True, default=True, help='Specify whether to sort files, default is true')
 @click.option('--headers', multiple=True, type=click.Path(exists=True), help='Specify file path to insert header')
 def merge(files, directory, output, sort, headers):
+    logging.basicConfig(format='%(asctime)s:%(levelname)-7s %(filename)s [line:%(lineno)d]: %(message)s', level=logging.WARNING)
     input_files = []
     if os.path.isdir(output):
         logging.error('output is invalid path')
@@ -148,10 +143,13 @@ def merge(files, directory, output, sort, headers):
         return False
 
     logging.info(f'{list(map(lambda x: os.path.basename(x), input_files))} \nwill be merged ...')
-    sorted_files = sort_pdf_files(input_files) if sort else input_files
-    direct_merge = True
-    if merge_pdf(sorted_files, output_path, direct_merge):
-
+    try:
+        sorted_files, has_duplicate = sort_pdf_files(input_files) if sort else (input_files, False)
+    except ExtractPageIndexError as e:
+        logging.error(f'merge failed {e}')
+        return False
+    logging.info(sorted_files)
+    if merge_pdf(sorted_files, output_path, not has_duplicate):
         if headers:
             headers_content = headers[:]
             headers_content.extend(output_path)

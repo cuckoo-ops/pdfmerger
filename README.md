@@ -52,6 +52,8 @@ pip install -r requirements-dev.txt
       -f, --files PATH      files to merge. e.g: 1.pdf 2.pdf...
       -d, --directory PATH  input directory
       -o, --output PATH     output path
+      -s, --sort            Specify whether to sort files, default is true
+      --headers PATH        Specify file path to insert header
       -h, --help            Show this message and exit.
     ```
 1. Example:
