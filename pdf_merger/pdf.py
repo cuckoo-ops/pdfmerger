@@ -1,3 +1,5 @@
+import time
+
 import pdfplumber
 
 from pdf_merger import ExtractPageIndexError
@@ -55,18 +57,27 @@ class Pdf(object):
         # import time
         page_indexes = Pages()
         # s = time.time()
+        # crop_coords = [0, 0, x1, bottom]
         with pdfplumber.open(self.pdf_path) as pdf:
             try:
                 # print(f'open file: {time.time()-s}')
 
                 for page in pdf.pages:
-                    # s = time.time()
-                    index = page.extract_words()[-1]['text']
+                    s = time.time()
+                    my_width = page.width
+                    my_height = page.height
+                    # Crop pages
+                    my_bbox = (0, my_height * 0.8,
+                               my_width, my_height)
+                    page_crop = page.crop(bbox=my_bbox)
+                    index = page_crop.extract_words()[-1]['text']
+                    # index = page.extract_words()[-1]['text']
 
                     # text = page.extract_text()
                     # index = text.splitlines()[self.index_in_line].strip()
 
-                    # print(f'extract index: {time.time() - s}')
+                    print(f'extract index: {time.time() - s}')
+
                     page_indexes.append(Page(self.pdf_path, int(index)))
 
             except Exception as e:
