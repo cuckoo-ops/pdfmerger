@@ -2,5 +2,5 @@
 pytest
 wheel
 #degrade pyppeteer to 0.2.4 from 0.2.5（default）
-pyppeteer==0.2.4
+#pyppeteer==0.2.4
 pyinstaller

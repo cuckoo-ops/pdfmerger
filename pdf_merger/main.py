@@ -1,13 +1,14 @@
 import glob
 import os
+import click
 import logging
 import PyPDF2
 from PyPDF2.utils import PdfReadError
-import click
 from pdf_merger import __app_name__, __version__, ExtractPageIndexError
 from pdf_merger.pdf import Pdf, Pages
 
-logging.basicConfig(format='%(asctime)s:%(levelname)-7s: %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s:%(levelname)-7s:%(filename)s [line:%(lineno)d] %(message)s',
+                    level=logging.WARNING)
 
 
 def list_pdf_directory(directory):
@@ -85,9 +86,12 @@ def merge_pdf(input_files: list, output_path: str, direct_merge: bool):
 
 def sort_pdf_files(input_files: list):
     pages_index = Pages()
-    for input_f in input_files:
-        pages_index.extend(Pdf(input_f).extract_pages_index())
-    pages_index.sort()
+    with click.progressbar(length=len(input_files),
+                           label='Extract page number...'.format(len(input_files))) as bar:
+        for input_f in input_files:
+            pages_index.extend(Pdf(input_f).extract_pages_index())
+            bar.update(1)
+        pages_index.sort()
     return pages_index.get_path_indexes(), pages_index.has_duplicate()
 
 
@@ -102,7 +106,7 @@ def cli():
 @click.help_option('-h', '--help')
 @click.argument('directory', type=click.Path())
 def list_pdf(directory):
-    logging.info(f'PDF list in the {os.path.dirname(directory)}:')
+    click.echo(f'PDF list in the {os.path.dirname(directory)}:')
     try:
         for index, f in enumerate(list_pdf_directory(directory), start=1):
             click.echo(f'[{index:<3}] {f}')
@@ -119,8 +123,6 @@ def list_pdf(directory):
 @click.option('--headers', multiple=True, type=click.Path(exists=True), help='Specify file path to insert header')
 @click.option('-l', '--line', default=-1, type=click.INT, help='Specify the page index is which line')
 def merge(files, directory, output, sort, headers, line):
-    logging.basicConfig(format='%(asctime)s:%(levelname)-7s %(filename)s [line:%(lineno)d]: %(message)s',
-                        level=logging.WARNING)
     Pdf.index_in_line = line
     input_files = []
     if os.path.isdir(output):
@@ -145,18 +147,20 @@ def merge(files, directory, output, sort, headers, line):
         logging.error('input files is empty')
         return False
 
-    logging.info(f'{list(map(lambda x: os.path.basename(x), input_files))} \nwill be merged ...')
+    click.echo(f'{list(map(lambda x: os.path.basename(x), input_files))} will be merged ...')
     try:
         sorted_files, has_duplicate = sort_pdf_files(input_files) if sort else (input_files, False)
     except ExtractPageIndexError as e:
         logging.error(f'merge failed {e}')
         return False
-    logging.info(sorted_files)
+    click.echo(sorted_files)
+    click.echo('Start to merge....')
     if merge_pdf(sorted_files, output_path, not has_duplicate):
         if headers:
             headers_content = headers[:]
             headers_content.extend(output_path)
             return merge_pdf(headers_content, output_path, True)
+        click.echo(f'Merged file save to \'{output_path}\'')
         return True
     return False
 

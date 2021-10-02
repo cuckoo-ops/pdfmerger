@@ -52,14 +52,23 @@ class Pdf(object):
         self.pdf_path = pdf_path
 
     def extract_pages_index(self) -> Pages:
+        # import time
         page_indexes = Pages()
+        # s = time.time()
         with pdfplumber.open(self.pdf_path) as pdf:
             try:
+                # print(f'open file: {time.time()-s}')
+
                 for page in pdf.pages:
-                    # index = page.extract_words()[-1]['text']
-                    text = page.extract_text()
-                    index = text.splitlines()[self.index_in_line].strip()
+                    # s = time.time()
+                    index = page.extract_words()[-1]['text']
+
+                    # text = page.extract_text()
+                    # index = text.splitlines()[self.index_in_line].strip()
+
+                    # print(f'extract index: {time.time() - s}')
                     page_indexes.append(Page(self.pdf_path, int(index)))
+
             except Exception as e:
                 raise ExtractPageIndexError(f'{index} on \'{self.pdf_path}\'', )
         return page_indexes

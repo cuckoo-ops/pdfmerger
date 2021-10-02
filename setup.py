@@ -33,7 +33,7 @@ app_name, version = load_name_version()
 setup(
     name=app_name,
     version=version,
-    description='pcd',
+    description='pdfmerger',
     long_description=long_description,
     install_requires=get_requires(os.path.join(here, 'requirements.txt')),
     packages=pkg,
