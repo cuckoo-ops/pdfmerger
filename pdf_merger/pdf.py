@@ -1,3 +1,4 @@
+import re
 import time
 
 import pdfplumber
@@ -49,9 +50,30 @@ class Pages():
 
 class Pdf(object):
     index_in_line = -1
-
+    index_box = None
+    index_pattern = None
     def __init__(self, pdf_path):
         self.pdf_path = pdf_path
+
+    def search_page_index(self, pattern):
+        if not pattern:
+            pattern = r'\d+'
+        with pdfplumber.open(self.pdf_path) as pdf:
+            for page in pdf.pages:
+                s = time.time()
+                w = page.width
+                h = page.height
+                # Crop pages
+                bbox = (0, h * 0.5,
+                        w, h * 0.5)
+                page_crop = page.crop(bbox=bbox)
+
+                text = page_crop.extract_words()[-1]['text']
+                matched_text = re.match(pattern, text)
+                if matched_text:
+                    Pdf.index_box = bbox
+                    Pdf.index_pattern = pattern
+                    return True
 
     def extract_pages_index(self) -> Pages:
         # import time
@@ -64,11 +86,11 @@ class Pdf(object):
 
                 for page in pdf.pages:
                     s = time.time()
-                    my_width = page.width
-                    my_height = page.height
+                    w = page.width
+                    h = page.height
                     # Crop pages
-                    my_bbox = (0, my_height * 0.8,
-                               my_width, my_height)
+                    my_bbox = (0, h * 0.5,
+                               w, h * 0.5)
                     page_crop = page.crop(bbox=my_bbox)
                     index = page_crop.extract_words()[-1]['text']
                     # index = page.extract_words()[-1]['text']
