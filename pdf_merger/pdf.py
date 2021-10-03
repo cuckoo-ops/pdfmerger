@@ -4,6 +4,7 @@ import time
 import pdfplumber
 
 from pdf_merger import ExtractPageIndexError
+from decimal import Decimal
 
 
 class Page():
@@ -51,29 +52,43 @@ class Pages():
 class Pdf(object):
     index_in_line = -1
     index_box = None
-    index_pattern = None
+    index_pattern = r'\d+'
+
     def __init__(self, pdf_path):
         self.pdf_path = pdf_path
 
-    def search_page_index(self, pattern):
-        if not pattern:
-            pattern = r'\d+'
-        with pdfplumber.open(self.pdf_path) as pdf:
-            for page in pdf.pages:
-                s = time.time()
-                w = page.width
-                h = page.height
-                # Crop pages
-                bbox = (0, h * 0.5,
-                        w, h * 0.5)
-                page_crop = page.crop(bbox=bbox)
+    @classmethod
+    def extract_page_index(cls, text):
+        return  re.match(cls.index_pattern, text)
 
-                text = page_crop.extract_words()[-1]['text']
-                matched_text = re.match(pattern, text)
-                if matched_text:
-                    Pdf.index_box = bbox
-                    Pdf.index_pattern = pattern
-                    return True
+    @classmethod
+    def search_page_index(cls, page, pattern, rate=0.1):
+
+        try:
+            s = time.time()
+            w = page.width
+            h = page.height
+            print(page.bbox)
+            # Crop pages
+            top_bbox = (Decimal.from_float(0), Decimal.from_float(0),
+                        w, h * Decimal.from_float(rate))
+            bottom_bbox = (Decimal.from_float(0),   h * Decimal.from_float(1 - rate),
+                           w, h)
+            page_crop = page.within_bbox(bbox=top_bbox,relative=True)
+
+            text = page_crop.extract_words()
+            print(text)
+            text = text[-1]['text']
+            matched_text = re.match(pattern, text)
+            print(f'extract index: {time.time() - s}')
+            if matched_text:
+                cls.index_box = top_bbox
+                cls.index_pattern = pattern
+                return True
+            else:
+                cls.search_page_index(page, pattern, bottom_bbox)
+        except Exception as e:
+            print(e)
 
     def extract_pages_index(self) -> Pages:
         # import time
@@ -88,6 +103,7 @@ class Pdf(object):
                     s = time.time()
                     w = page.width
                     h = page.height
+
                     # Crop pages
                     my_bbox = (0, h * 0.5,
                                w, h * 0.5)

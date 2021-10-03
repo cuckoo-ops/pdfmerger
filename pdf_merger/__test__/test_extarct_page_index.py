@@ -1,10 +1,15 @@
 import os
 import unittest
+
+import pdfplumber
+
 from pdf_merger.pdf import Pdf
 from . import test_data_dir
 from pdf_merger.pdf import Pages, Page
 
 test_data_dir = 'F:\gitrepo\mfd\papers\.tmp-BOOK\\2020\\02'
+
+
 class TestPdf(unittest.TestCase):
     def test_pdf_page_index(self):
         # pdf = Pdf(os.path.join(test_data_dir, '2003.07932v1.pdf'))
@@ -18,6 +23,11 @@ class TestPdf(unittest.TestCase):
         pages.sort()
         print(pages.get_path_indexes())
         self.assertFalse(pages.has_duplicate())
+
+    def test_search_index(self):
+        pdf_path = os.path.join(test_data_dir, '7.pdf')
+        with pdfplumber.open(pdf_path) as pdf:
+            Pdf.search_page_index(pdf.pages[0], None, None)
 
     def test_pages_get_path_indexes(self):
         pages = Pages()
