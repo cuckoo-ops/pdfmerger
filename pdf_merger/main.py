@@ -115,6 +115,15 @@ def list_pdf(directory):
 
 
 @click.help_option('-h', '--help')
+@cli.command('show', help='merge pdf')
+@click.option('-d', '--directory', type=click.Path(), help='input directory')
+def show(directory):
+    # try:
+    #     input_files = list_pdf_directory(directory)
+    #     Pdf(input_files[0]).display_page_text()
+    pass
+
+@click.help_option('-h', '--help')
 @cli.command('merge', help='merge pdf')
 @click.option('-f', '--files', multiple=True, type=click.Path(exists=True), help='files to merge. e.g: 1.pdf 2.pdf...')
 @click.option('-d', '--directory', type=click.Path(), help='input directory')
@@ -123,7 +132,7 @@ def list_pdf(directory):
 @click.option('--headers', multiple=True, type=click.Path(exists=True), help='Specify file path to insert header')
 @click.option('-l', '--line', default=-1, type=click.INT, help='Specify the page index is which line')
 def merge(files, directory, output, sort, headers, line):
-    Pdf.index_in_line = line
+    Pdf.index_on_line = line
     input_files = []
     if os.path.isdir(output):
         logging.error('output is invalid path')

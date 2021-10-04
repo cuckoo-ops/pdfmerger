@@ -27,7 +27,13 @@ class TestPdf(unittest.TestCase):
     def test_search_index(self):
         pdf_path = os.path.join(test_data_dir, '7.pdf')
         with pdfplumber.open(pdf_path) as pdf:
-            Pdf.search_page_index(pdf.pages[0], None, None)
+            index = Pdf.search_page_index(pdf.pages[0])
+            print(index)
+
+    def test_test_search_index(self):
+        pdf_path = os.path.join(test_data_dir, '7.pdf')
+        pdf = Pdf(pdf_path)
+        pdf.test_extract_pages_index()
 
     def test_pages_get_path_indexes(self):
         pages = Pages()

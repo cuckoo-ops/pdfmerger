@@ -50,74 +50,49 @@ class Pages():
 
 
 class Pdf(object):
-    index_in_line = -1
-    index_box = None
-    index_pattern = r'\d+'
+    index_on_line = -1
+    index_pattern = r'(\d+)'
+    on_top = True
 
     def __init__(self, pdf_path):
         self.pdf_path = pdf_path
 
     @classmethod
-    def extract_page_index(cls, text):
-        return  re.match(cls.index_pattern, text)
+    def search_page_index(cls, page):
+        text = page.extract_text().split('\n')
+        index = re.findall(cls.index_pattern, text[cls.index_on_line])[0]
+        return index
 
-    @classmethod
-    def search_page_index(cls, page, pattern, rate=0.1):
+    def test_extract_pages_index(self, pages_count=2):
+        with pdfplumber.open(self.pdf_path) as pdf:
+            for page_index in range(pages_count):
+                page = pdf.pages[page_index]
+                index = self.search_page_index(page)
+                print(f'{page.page_number}: Real PageNumber {index}')
 
-        try:
-            s = time.time()
-            w = page.width
-            h = page.height
-            print(page.bbox)
-            # Crop pages
-            top_bbox = (Decimal.from_float(0), Decimal.from_float(0),
-                        w, h * Decimal.from_float(rate))
-            bottom_bbox = (Decimal.from_float(0),   h * Decimal.from_float(1 - rate),
-                           w, h)
-            page_crop = page.within_bbox(bbox=top_bbox,relative=True)
+    def display_page_text(self, pages_count=2, line_count=5):
+        with pdfplumber.open(self.pdf_path) as pdf:
+            for page_index in range(pages_count):
+                page = pdf.page[page_index]
+                text = page.extract_text().split('\n')
+                rg = min(len(text), line_count)
+                search_range = range(rg)
+                for l in search_range:
+                    print(f'{l} {text[l]}')
 
-            text = page_crop.extract_words()
-            print(text)
-            text = text[-1]['text']
-            matched_text = re.match(pattern, text)
-            print(f'extract index: {time.time() - s}')
-            if matched_text:
-                cls.index_box = top_bbox
-                cls.index_pattern = pattern
-                return True
-            else:
-                cls.search_page_index(page, pattern, bottom_bbox)
-        except Exception as e:
-            print(e)
+                search_range = range(-1, -rg, -1)
+                for l in search_range:
+                    print(f'{l} {text[l]}')
 
     def extract_pages_index(self) -> Pages:
-        # import time
         page_indexes = Pages()
-        # s = time.time()
-        # crop_coords = [0, 0, x1, bottom]
         with pdfplumber.open(self.pdf_path) as pdf:
             try:
-                # print(f'open file: {time.time()-s}')
-
                 for page in pdf.pages:
                     s = time.time()
-                    w = page.width
-                    h = page.height
-
-                    # Crop pages
-                    my_bbox = (0, h * 0.5,
-                               w, h * 0.5)
-                    page_crop = page.crop(bbox=my_bbox)
-                    index = page_crop.extract_words()[-1]['text']
-                    # index = page.extract_words()[-1]['text']
-
-                    # text = page.extract_text()
-                    # index = text.splitlines()[self.index_in_line].strip()
-
+                    index = self.search_page_index(page)
                     print(f'extract index: {time.time() - s}')
-
                     page_indexes.append(Page(self.pdf_path, int(index)))
-
             except Exception as e:
                 raise ExtractPageIndexError(f'{index} on \'{self.pdf_path}\'', )
         return page_indexes
