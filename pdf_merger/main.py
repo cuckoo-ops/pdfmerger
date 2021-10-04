@@ -23,7 +23,7 @@ def list_pdf_directory(directory):
 def merge_pdf(input_files: list, output_path: str, direct_merge: bool):
     '''
     :param direct_merge:
-    :param input_files:
+    :param input_files:[(path, [(index, page_number),(index, page_number)]),]
     :param output_path:
     :param header:
     :return:
@@ -48,7 +48,7 @@ def merge_pdf(input_files: list, output_path: str, direct_merge: bool):
         merge_file = PyPDF2.PdfFileWriter()
         for one_file in input_files:
             file_path = one_file[0]
-            extracted_page_index = one_file[1]
+            onf_file_pages = one_file[1]
             if file_path in open_files.keys():
                 one_pdf = open_files.get(file_path)
             else:
@@ -58,13 +58,13 @@ def merge_pdf(input_files: list, output_path: str, direct_merge: bool):
                 pdf_obj = PyPDF2.PdfFileReader(file_path, strict=False)
                 page_number = pdf_obj.getNumPages()
 
-                if page_number < len(extracted_page_index):
+                if page_number < len(onf_file_pages):
                     logging.error(
-                        f'will extracted index {len(extracted_page_index)} greater than total pages {page_number}')
+                        f'will extracted index {len(onf_file_pages)} greater than total pages {page_number}')
                     merged_ok = False
                     break
-                for i in extracted_page_index:
-                    p = pdf_obj.getPage(i)
+                for page in onf_file_pages:
+                    p = pdf_obj.getPage(page[0])
                     merge_file.addPage(p)
                 open_files[file_path] = one_pdf
             except Exception as e:
@@ -85,14 +85,18 @@ def merge_pdf(input_files: list, output_path: str, direct_merge: bool):
 
 
 def sort_pdf_files(input_files: list):
+    '''
+    :param input_files:  [(path, [(index, page_number),(index, page_number)]),]
+    :return:
+    '''
     pages_index = Pages()
     with click.progressbar(length=len(input_files),
-                           label='Extract page number...'.format(len(input_files))) as bar:
+                           label='Extracting page number...'.format(len(input_files))) as bar:
         for input_f in input_files:
             pages_index.extend(Pdf(input_f).extract_pages_index())
             bar.update(1)
         pages_index.sort()
-    return pages_index.get_path_indexes(), pages_index.has_duplicate()
+    return pages_index.get_path_indexes()
 
 
 @click.version_option(version=__version__, prog_name=__app_name__)
@@ -102,7 +106,7 @@ def cli():
     pass
 
 
-@cli.command('list', help='list pdf files in directory')
+@cli.command('list', help='List pdf files in directory')
 @click.help_option('-h', '--help')
 @click.argument('directory', type=click.Path())
 def list_pdf(directory):
@@ -115,24 +119,46 @@ def list_pdf(directory):
 
 
 @click.help_option('-h', '--help')
-@cli.command('show', help='merge pdf')
-@click.option('-d', '--directory', type=click.Path(), help='input directory')
-def show(directory):
-    # try:
-    #     input_files = list_pdf_directory(directory)
-    #     Pdf(input_files[0]).display_page_text()
-    pass
+@cli.command('show', help='Display pdf content include page number with text')
+@click.argument('pdf_file_path', type=click.Path())
+@click.option('-p', '--pages', type=click.IntRange(1, 10), default=2, help='specify page count for showing,default=2')
+@click.option('-l', '--lines', type=click.IntRange(1, 50), default=5, help='specify line count for showing,default=5')
+def show(pdf_file_path, pages, lines):
+    try:
+        Pdf(pdf_file_path).display_page_text(pages, lines)
+    except Exception as e:
+        logging.error(e)
+
 
 @click.help_option('-h', '--help')
-@cli.command('merge', help='merge pdf')
+@cli.command('test', help='Test whether pattern can correctly extract page numbers')
+@click.argument('pdf_file_path', type=click.Path())
+@click.option('-p', '--pages', type=click.IntRange(1, 10), default=2, help='specify page count for showing,default=2')
+@click.option('--pattern', type=click.STRING, default='(\d+)',
+              help='specify search regex pattern for extracting page index,default:(\d+)')
+@click.option('--line-number', type=click.INT, multiple=True, default=[-1, ],
+              help='specify line number for extracting page index,default=-1')
+def test(pdf_file_path, line_number, pages, pattern):
+    try:
+        Pdf(pdf_file_path).test_extract_pages_index(line_number, pattern, pages)
+    except Exception as e:
+        logging.error(e)
+
+
+@click.help_option('-h', '--help')
+@cli.command('merge', help='Sort and merge pdf with page number')
 @click.option('-f', '--files', multiple=True, type=click.Path(exists=True), help='files to merge. e.g: 1.pdf 2.pdf...')
 @click.option('-d', '--directory', type=click.Path(), help='input directory')
 @click.option('-o', '--output', default=os.getcwd(), type=click.Path(writable=True), help='output path')
 @click.option('-s', '--sort', is_flag=True, default=True, help='Specify whether to sort files, default is true')
+@click.option('--pattern', type=click.STRING, default='(\d+)',
+              help='specify search regex pattern for extracting page index,default:(\d+)')
+@click.option('--line-number', type=click.INT, multiple=True, default=[-1, ],
+              help='specify line number for extracting page index,default=-1')
 @click.option('--headers', multiple=True, type=click.Path(exists=True), help='Specify file path to insert header')
-@click.option('-l', '--line', default=-1, type=click.INT, help='Specify the page index is which line')
-def merge(files, directory, output, sort, headers, line):
-    Pdf.index_on_line = line
+def merge(files, directory, output, sort, pattern, line_number, headers):
+    Pdf.index_on_line = line_number
+    Pdf.pattern = pattern
     input_files = []
     if os.path.isdir(output):
         logging.error('output is invalid path')
@@ -158,13 +184,13 @@ def merge(files, directory, output, sort, headers, line):
 
     click.echo(f'{list(map(lambda x: os.path.basename(x), input_files))} will be merged ...')
     try:
-        sorted_files, has_duplicate = sort_pdf_files(input_files) if sort else (input_files, False)
+        sorted_files = sort_pdf_files(input_files) if sort else input_files
     except ExtractPageIndexError as e:
         logging.error(f'merge failed {e}')
         return False
     click.echo(sorted_files)
     click.echo('Start to merge....')
-    if merge_pdf(sorted_files, output_path, not has_duplicate):
+    if merge_pdf(sorted_files, output_path, not sort):
         if headers:
             headers_content = headers[:]
             headers_content.extend(output_path)

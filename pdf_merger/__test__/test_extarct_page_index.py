@@ -1,55 +1,46 @@
 import os
 import unittest
 
-import pdfplumber
-
 from pdf_merger.pdf import Pdf
 from . import test_data_dir
 from pdf_merger.pdf import Pages, Page
 
-test_data_dir = 'F:\gitrepo\mfd\papers\.tmp-BOOK\\2020\\02'
-
 
 class TestPdf(unittest.TestCase):
-    def test_pdf_page_index(self):
-        # pdf = Pdf(os.path.join(test_data_dir, '2003.07932v1.pdf'))
-        pdf = Pdf(os.path.join(test_data_dir, '3.pdf'))
-        # pdf.get_text()
-        pdf.extract_pages_index()
-
-    def test_pages_sort(self):
-        pdf = Pdf(os.path.join(test_data_dir, '7.pdf'))
-        pages = pdf.extract_pages_index()
-        pages.sort()
-        print(pages.get_path_indexes())
-        self.assertFalse(pages.has_duplicate())
-
-    def test_search_index(self):
-        pdf_path = os.path.join(test_data_dir, '7.pdf')
-        with pdfplumber.open(pdf_path) as pdf:
-            index = Pdf.search_page_index(pdf.pages[0])
-            print(index)
-
-    def test_test_search_index(self):
-        pdf_path = os.path.join(test_data_dir, '7.pdf')
+    def test_search_page_index(self):
+        pdf_path = os.path.join(test_data_dir, '3.pdf')
         pdf = Pdf(pdf_path)
-        pdf.test_extract_pages_index()
+        pages = pdf.extract_pages_index()
+        self.assertTrue(isinstance(pages, Pages))
+        self.assertEqual(len(pages.pages), 3)
+        self.assertEqual(pages.pages[0].index, 25)
+        self.assertEqual(pages.pages[1].index, 26)
+        self.assertEqual(pages.pages[2].index, 27)
+
+    def test_display_page_text(self):
+        pdf_path = os.path.join(test_data_dir, '3.pdf')
+        pdf = Pdf(pdf_path)
+        pdf.display_page_text()
 
     def test_pages_get_path_indexes(self):
         pages = Pages()
-        pages.append(Page('./11.pdf', 1))
-        pages.append(Page('./11.pdf', 3))
-        pages.append(Page('./11.pdf', 2))
-        pages.append(Page('./11.pdf', 4))
-        pages.append(Page('./11.pdf', 7))
+        pages.append(Page('./11.pdf', 0,1))
+        pages.append(Page('./11.pdf', 1,3))
+        pages.append(Page('./11.pdf', 2,2))
+        pages.append(Page('./11.pdf', 3,4))
+        pages.append(Page('./11.pdf', 4,7))
 
-        pages.append(Page('./2.pdf', 5))
-        pages.append(Page('./2.pdf', 6))
-        pages.append(Page('./2.pdf', 7))
-        pages.append(Page('./2.pdf', 4))
+        pages.append(Page('./2.pdf', 5, 5))
+        pages.append(Page('./2.pdf', 6, 6))
+        pages.append(Page('./2.pdf', 7, 7))
+        pages.append(Page('./2.pdf', 8, 4))
         pages.sort()
         index = pages.get_path_indexes()
+        self.assertTrue(pages.has_duplicate())
         self.assertEqual(len(index), 3)
+        self.assertEqual(len(index[0][1]),4)
+        self.assertEqual(len(index[1][1]),2)
+        self.assertEqual(len(index[2][1]),1)
 
 
 if __name__ == '__main__':
