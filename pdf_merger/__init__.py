@@ -1,2 +1,6 @@
-__version__ = '0.1.0'
+__version__ = '0.2.1'
 __app_name__ = 'pdfmerger'
+
+
+class ExtractPageIndexError(Exception):
+    pass

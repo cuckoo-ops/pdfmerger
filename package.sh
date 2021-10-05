@@ -13,7 +13,7 @@ mkdir -pv ${release_dir}
 
 rm -rvf ${self_dir}/dist ${self_dir}/build ${self_dir}/*.egg-info
 #python3 ${self_dir}/setup.py clean --all
-python3 ${self_dir}/setup.py  bdist_wheel -d ${release_dir}
+python ${self_dir}/setup.py  bdist_wheel -d ${release_dir}
 
 #python3 ${self_dir}/setup.py sdist -d ${release_dir}
 
