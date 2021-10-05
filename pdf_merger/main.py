@@ -8,7 +8,7 @@ from pdf_merger import __app_name__, __version__, ExtractPageIndexError
 from pdf_merger.pdf import Pdf, Pages
 
 logging.basicConfig(format='%(asctime)s:%(levelname)-7s:%(filename)s [line:%(lineno)d] %(message)s',
-                    level=logging.WARNING)
+                    level=logging.INFO)
 
 
 def list_pdf_directory(directory):

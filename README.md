@@ -115,10 +115,10 @@ pip install -r requirements-dev.txt
     ```
 1. Example:
     ```batch
-     .\pdfmerger merge -f /xx/xx/test+3.4.pdf  -f /xx/xx/test+3.3.pdf -o output.pdf
+     .\pdfmerger merge -f /xx/xx/test+3.4.pdf  -f /xx/xx/test+3.3.pdf -o output.pdf --line-number=0 --pattern="·(\d+)·"
     ```
 1. Example:
      ```batch
-     .\pdfmerger merge -d /xx/xx/*+3.*.pdf -o output.pdf
+     .\pdfmerger merge -d /xx/xx/*+3.*.pdf -o output.pdf --line-number=0 --pattern="·(\d+)·"
     ```
 Note: replace with pdfmerger to pdfmerger.exe on windows
